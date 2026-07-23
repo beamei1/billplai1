@@ -1,4 +1,4 @@
-// ไฟล์: api/scan.js (ฉบับอัปเกรด แก้ปัญหาอ่านไม่ออก)
+// ไฟล์: api/scan.js (แก้ไขชื่อรุ่นโมเดลเป็น gemini-2.0-flash)
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -12,9 +12,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ใช้รุ่น 1.5-flash ซึ่งเสถียรและโควต้าฟรีเยอะที่สุดสำหรับการอ่านรูปภาพ
+    // 💥 เปลี่ยนรุ่นตรงนี้เป็น gemini-2.0-flash ครับ (รองรับงาน Vision/OCR ใบเสร็จได้แม่นยำและเร็วมาก)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -22,7 +22,6 @@ export default async function handler(req, res) {
           contents: [{
             parts: [
               { 
-                // 💥 ปรับคำสั่งให้ยืดหยุ่นขึ้นมาก: ถ้าหาอะไรไม่เจอ ให้เดาหรือใส่ค่าเริ่มต้น ห้ามส่งค่าว่าง
                 text: `คุณคือ AI ช่วยอ่านใบเสร็จร้านอาหารและบิลค่าใช้จ่าย กรุณาวิเคราะห์รูปภาพนี้แล้วสกัดข้อมูลออกมาเป็น JSON เท่านั้น โดยมีกฎดังนี้:
 1. "shop_name": ดึงชื่อร้านค้า หรือหัวบิล ถ้าไม่มีชื่อร้านเลยให้ใส่ว่า "ค่าอาหาร/เครื่องดื่ม"
 2. "items": ให้ดึงรายการสินค้า/อาหารทั้งหมดที่มีในบิล พร้อมราคาต่อหน่วย (price) และจำนวนชิ้น (qty)
@@ -36,7 +35,7 @@ export default async function handler(req, res) {
           }],
           generationConfig: { 
             response_mime_type: "application/json",
-            temperature: 0.1 // ปรับให้ AI ไม่จินตนาการเอง เน้นอ่านตามจริง
+            temperature: 0.1 
           }
         })
       }
@@ -44,7 +43,6 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     
-    // เช็คว่า Google แจ้ง Error อะไรกลับมาหรือไม่ (เช่น โควต้าเต็ม หรือ Key ผิด)
     if (data.error) {
       return res.status(500).json({ error: `Google API Error: ${data.error.message}` });
     }
