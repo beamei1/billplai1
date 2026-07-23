@@ -1,4 +1,4 @@
-// ไฟล์: api/scan.js (เปลี่ยนเป็น gemini-1.5-flash เพื่อใช้สิทธิ์ Free Tier)
+// ไฟล์: api/scan.js (ใช้โมเดลปัจจุบัน gemini-2.5-flash + คำสั่งอ่านบิลยืดหยุ่นสูง)
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -12,9 +12,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 💥 บรรทัดนี้สำคัญมาก! ต้องใช้ gemini-1.5-flash เท่านั้น ถึงจะไม่ติด limit: 0
+    // 💥 ใช้รุ่น gemini-2.5-flash ซึ่งเป็นรุ่นหลักปัจจุบันที่รองรับ Free Tier ไม่โดนปิดโควต้า
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
