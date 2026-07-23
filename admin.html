@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>🛡️ Admin Backend (Supabase - Full CRUD)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+      --bg: #0f172a; --surface: #1e293b; --surface-solid: #334155; --border: rgba(255, 255, 255, 0.1); 
+      --text: #f8fafc; --muted: #94a3b8; --primary: #6366f1; --danger: #ef4444; --success: #10b981; --info: #0ea5e9; --r: 12px; 
+    }
+    body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { color: #8b5cf6; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .tabs button { background: transparent; color: var(--muted); border: none; padding: 10px 20px; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: var(--r); }
+    .tabs button.active { background: var(--surface); color: var(--primary); }
+    .panel { display: none; background: var(--surface); padding: 20px; border-radius: var(--r); border: 1px solid var(--border); overflow-x: auto; }
+    .panel.active { display: block; }
+    
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .panel-header h2 { margin: 0; font-size: 18px; }
+    
+    table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
+    th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { color: var(--muted); font-size: 13px; text-transform: uppercase; font-weight: 600; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+    
+    button.action-btn { padding: 6px 12px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; color: white; font-size: 13px; margin-right: 4px; margin-bottom: 4px; }
+    .btn-edit { background: var(--primary); } 
+    .btn-danger { background: var(--danger); }
+    .btn-success { background: var(--success); }
+    .btn-info { background: var(--info); }
+    .btn-back { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 14px; }
+    
+    .chip { display: inline-block; padding: 4px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+    .chip.open { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .chip.closed { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+    /* Modal Form Styles */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 16px; }
+    .modal { background: var(--surface); color: var(--text); width: 100%; max-width: 500px; padding: 24px; border-radius: var(--r); border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+    .modal h3 { margin-top: 0; font-size: 18px; color: #8b5cf6; margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: white; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); outline: none; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+    .modal-actions button { padding: 10px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; font-size: 14px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>
+    🛡️ แดชบอร์ดแอดมิน
+   <button class="btn-back" onclick="window.location.href = '/'">⬅️ กลับแอปหลัก</button>
+  </h1>
+  
+  <div class="tabs">
+    <button class="active" onclick="switchTab('users', this)">👤 ผู้ใช้งาน & รหัสผ่าน</button>
+    <button onclick="switchTab('groups', this)">🏠 กลุ่ม</button>
+    <button onclick="switchTab('expenses', this)">🧾 บิลทั้งหมด</button>
+  </div>
+
+  <div id="panel-users" class="panel active">
+    <div class="panel-header">
+      <h2>จัดการผู้ใช้</h2>
+      <button class="action-btn btn-success" onclick="openUserModal()">➕ เพิ่มผู้ใช้งานใหม่</button>
+    </div>
+    <table>
+      <thead><tr><th>ชื่อบัญชี (Username)</th><th>รหัสผ่าน (Plain Text)</th><th>ชื่อแสดงผล</th><th>สิทธิ์ Admin</th><th>การกระทำ</th></tr></thead>
+      <tbody id="users-list"><tr><td colspan="5">กำลังโหลด...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div id="panel-groups" class="panel">
+    <div class="panel-header">
+      <h2>จัดการกลุ่ม</h2>
+      <button class="action-btn btn-success" onclick="openGroupModal()">➕ สร้างกลุ่มใหม่</button>
+    </div>
+    <table>
+      <thead><tr><th>ชื่อกลุ่ม</th><th>สมาชิก</th><th>สถานะ</th><th>รหัสเข้ากลุ่ม</th><th>แอดมินกลุ่ม</th><th>การกระทำ</th></tr></thead>
+      <tbody id="groups-list"><tr><td colspan="6">กำลังโหลด...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div id="panel-expenses" class="panel">
+    <div class="panel-header">
+      <h2>ประวัติบิลในระบบ</h2>
+      <button class="action-btn btn-success" onclick="openExpenseModal()">➕ เพิ่มบิลใหม่</button>
+    </div>
+    <table>
+      <thead><tr><th>วันที่</th><th>ร้านค้า</th><th>ยอดเงิน</th><th>คนจ่าย</th><th>Group ID</th><th>การกระทำ</th></tr></thead>
+      <tbody id="expenses-list"><tr><td colspan="6">กำลังโหลด...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Dynamic CRUD Form Modal -->
+<div id="crud-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="modal-title">ฟอร์มจัดการข้อมูล</h3>
+    <form id="modal-form" onsubmit="handleFormSubmit(event)">
+      <div id="form-fields"></div>
+      <div class="modal-actions">
+        <button type="button" style="background:var(--surface-solid); color:white;" onclick="closeModal()">ปิด / ยกเลิก</button>
+        <button type="submit" id="btn-save-modal" class="btn-success">บันทึกข้อมูล</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+const firebaseConfig = { apiKey: "AIzaSyCm2dCKtVQ3KGsaKNdTye6q0fxgQ2AWLvI", authDomain: "bill20266.firebaseapp.com", projectId: "bill20266" };
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+const db = firebase.firestore();
+
+// 🟢 เปิดใช้งาน Offline Persistence
+db.enablePersistence()
+  .catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.warn('เปิดแอปหลายแท็บ โหมดออฟไลน์จะทำงานได้แค่แท็บเดียว');
+    } else if (err.code == 'unimplemented') {
+      console.warn('เบราว์เซอร์นี้ไม่รองรับโหมดออฟไลน์');
+    }
+  });
+
+let globalUsers = [], globalGroups = [];
+let currentFormType = '', currentEditId = '';
+
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tabId).classList.add('active'); btn.classList.add('active');
+}
+
+window.addEventListener('load', async () => {
+  const saved = localStorage.getItem('splitbill_user') || sessionStorage.getItem('splitbill_user');
+  if (!saved) { alert('กรุณาล็อกอินเข้าสู่ระบบก่อน'); kickUserOut(); return; }
+  
+  const localUser = JSON.parse(saved);
+  const docSnap = await db.collection('users').doc(localUser.username).get();
+    
+  if (!docSnap.exists || docSnap.data().is_admin !== true) {
+    alert('🔒 ปฏิเสธการเข้าถึง: หน้านี้เปิดให้เข้าได้เฉพาะแอดมินเท่านั้น');
+    kickUserOut(); return;
+  }
+  refreshAllData();
+});
+
+function kickUserOut() { window.location.href = "/"; }
+
+async function refreshAllData() {
+  const uSnap = await db.collection('users').get();
+  globalUsers = uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b)=>a.username.localeCompare(b.username));
+  
+  const gSnap = await db.collection('groups').get();
+  globalGroups = gSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  renderUsers(); renderGroups(); renderExpenses();
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('users-list'); tbody.innerHTML = '';
+  globalUsers.forEach(u => {
+    const adminChip = u.is_admin ? '<span class="chip open">ใช่ (Admin)</span>' : '<span class="chip closed">ไม่ใช่</span>';
+    tbody.innerHTML += `<tr><td><b>${u.username}</b></td><td style="color:#fcd34d; font-family:monospace; font-size:15px;">🔑 ${u.password}</td><td>${u.display_name || '-'}</td><td>${adminChip}</td><td><button class="action-btn btn-edit" onclick="openUserModal('${u.username}')">✏️ แก้ไข</button><button class="action-btn btn-danger" onclick="deleteUser('${u.username}')">🗑️ ลบ</button></td></tr>`;
+  });
+}
+
+function renderGroups() {
+  const tbody = document.getElementById('groups-list'); tbody.innerHTML = '';
+  globalGroups.forEach(g => {
+    tbody.innerHTML += `<tr><td><b>${g.group_name}</b></td><td><small>${g.members ? g.members.join(', ') : 'ไม่มี'}</small></td><td><span class="chip ${g.status=='closed'?'closed':'open'}">${g.status}</span></td><td><code>${g.join_code}</code></td><td><small>${g.admins ? g.admins.join(', ') : '-'}</small></td><td><button class="action-btn btn-info" onclick="viewGroupSummary('${g.id}')">📊 สรุปยอด</button><button class="action-btn btn-edit" onclick="openGroupModal('${g.id}')">✏️ แก้ไข</button><button class="action-btn btn-danger" onclick="deleteGroup('${g.id}')">🗑️ ลบ</button></td></tr>`;
+  });
+}
+
+async function renderExpenses() {
+  const snap = await db.collection('expenses').orderBy('created_at','desc').get();
+  const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const tbody = document.getElementById('expenses-list'); tbody.innerHTML = '';
+  if(data.length > 0) {
+    data.forEach(e => { tbody.innerHTML += `<tr><td>${e.date}</td><td><b>${e.shop_name}</b></td><td style="color:#10b981; font-weight:bold;">${parseFloat(e.total_amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</td><td>${e.payer_id}</td><td><small>${globalGroups.find(g=>g.id===e.group_id)?.group_name || 'ไม่พบกลุ่ม'}</small></td><td><button class="action-btn btn-edit" onclick="openExpenseModal('${e.id}')">✏️ แก้ไข</button><button class="action-btn btn-danger" onclick="deleteExpense('${e.id}')">🗑️ ลบ</button></td></tr>`; });
+  } else { tbody.innerHTML = '<tr><td colspan="6">ไม่มีบิลในระบบ</td></tr>'; }
+}
+
+function openModal(title, isSummary = false) { 
+  document.getElementById('modal-title').innerText = title; 
+  document.getElementById('crud-modal').classList.remove('hidden'); 
+  document.getElementById('btn-save-modal').style.display = isSummary ? 'none' : 'inline-block';
+}
+function closeModal() { document.getElementById('crud-modal').classList.add('hidden'); }
+
+// 🎯 แบบฟอร์ม User (จะเห็นรหัสผ่าน และแก้ได้)
+function openUserModal(username = null) {
+  currentFormType = 'user'; currentEditId = username;
+  let u = username ? globalUsers.find(x => x.username === username) : { username: '', password: '', display_name: '', is_admin: false };
+  let html = `<div class="form-group"><label>ชื่อบัญชี (Username) *ห้ามซ้ำ</label><input type="text" id="form-u-username" value="${u.username}" ${username ? 'disabled' : 'required'}></div><div class="form-group"><label>รหัสผ่าน (Plain Text)</label><input type="text" id="form-u-password" value="${u.password}" required></div><div class="form-group"><label>ชื่อแสดงผล (Display Name)</label><input type="text" id="form-u-display" value="${u.display_name || ''}" required></div><div class="form-group"><label>สิทธิ์แอดมินระบบ (is_admin)</label><select id="form-u-admin"><option value="false" ${!u.is_admin ? 'selected' : ''}>ไม่ใช่แอดมิน</option><option value="true" ${u.is_admin ? 'selected' : ''}>เป็นแอดมินระบบ (🛡️)</option></select></div>`;
+  document.getElementById('form-fields').innerHTML = html; openModal(username ? '✏️ แก้ไขข้อมูลผู้ใช้' : '➕ เพิ่มผู้ใช้งานใหม่');
+}
+
+function openGroupModal(id = null) {
+  currentFormType = 'group'; currentEditId = id;
+  let g = id ? globalGroups.find(x => x.id === id) : { group_name: '', join_code: Math.floor(100000+Math.random()*900000).toString(), status: 'open', members: [], admins: [] };
+  let html = `<div class="form-group"><label>ชื่อกลุ่มทริป</label><input type="text" id="form-g-name" value="${g.group_name}" required></div><div class="form-group"><label>รหัสเข้ากลุ่ม (6 หลัก)</label><input type="text" id="form-g-code" value="${g.join_code}" required></div><div class="form-group"><label>สถานะกลุ่ม</label><select id="form-g-status"><option value="open" ${g.status == 'open' ? 'selected' : ''}>เปิดทริป (🟢)</option><option value="closed" ${g.status == 'closed' ? 'selected' : ''}>ปิดทริปแล้ว (🔒)</option></select></div><div class="form-group"><label>รายชื่อสมาชิกกลุ่ม (คั่นด้วยเครื่องหมายจุลภาค , )</label><input type="text" id="form-g-members" value="${g.members ? g.members.join(',') : ''}" placeholder="ระบุ username ของเพื่อน"></div><div class="form-group"><label>แอดมินกลุ่ม (คั่นด้วยเครื่องหมายจุลภาค , )</label><input type="text" id="form-g-admins" value="${g.admins ? g.admins.join(',') : ''}"></div>`;
+  document.getElementById('form-fields').innerHTML = html; openModal(id ? '✏️ แก้ไขกลุ่มทริป' : '➕ สร้างกลุ่มทริปใหม่');
+}
+
+async function openExpenseModal(id = null) {
+  currentFormType = 'expense'; currentEditId = id;
+  let e = { group_id: '', shop_name: '', total_amount: 0, payer_id: '', date: new Date().toISOString().split('T')[0], items: [] };
+  if(id) { const docSnap = await db.collection('expenses').doc(id).get(); if(docSnap.exists) e = docSnap.data(); }
+  let groupOptions = globalGroups.map(g => `<option value="${g.id}" ${g.id === e.group_id ? 'selected' : ''}>${g.group_name}</option>`).join('');
+  let payerOptions = globalUsers.map(u => `<option value="${u.username}" ${u.username === e.payer_id ? 'selected' : ''}>${u.username}</option>`).join('');
+  let easyItemsText = ''; if (e.items && e.items.length > 0) { easyItemsText = e.items.map(i => `${i.buyerId}=${i.price}`).join(', '); }
+  let html = `<div class="form-group"><label>เลือกกลุ่ม</label><select id="form-e-group">${groupOptions}</select></div><div class="form-group"><label>ชื่อร้านค้า</label><input type="text" id="form-e-shop" value="${e.shop_name}" required></div><div class="form-group"><label>ยอดเงินรวม (บาท)</label><input type="number" step="0.01" id="form-e-amount" value="${e.total_amount}" required></div><div class="form-group"><label>คนสำรองจ่ายเงิน</label><select id="form-e-payer">${payerOptions}</select></div><div class="form-group"><label>วันที่ (YYYY-MM-DD)</label><input type="text" id="form-e-date" value="${e.date}" required></div><div class="form-group"><label>แก้ไขรายละเอียดคนหารและยอดเงิน (คั่นด้วยจุลภาค ,)</label><input type="text" id="form-e-items-easy" value="${easyItemsText}" placeholder="เช่น bank=150, am=200"><small style="color:var(--muted); font-size:12px;">*ระบบจะนำค่าในช่องนี้ไปแปลงและคำนวณเก็บเข้าฐานข้อมูลอัตโนมัติ</small></div>`;
+  document.getElementById('form-fields').innerHTML = html; openModal(id ? '✏️ แก้ไขบิลค่าใช้จ่าย' : '➕ เพิ่มบิลใหม่เข้าสู่ระบบ');
+}
+
+async function viewGroupSummary(groupId) {
+  const group = globalGroups.find(g => g.id === groupId);
+  if(!group) return alert('ไม่พบข้อมูลกลุ่ม');
+  document.getElementById('form-fields').innerHTML = '<p style="text-align:center;">⏳ กำลังโหลดข้อมูล...</p>';
+  openModal(`📊 สรุปยอดกลุ่ม: ${group.group_name}`, true);
+
+  const snap = await db.collection('expenses').where('group_id', '==', groupId).get();
+  const expenses = snap.docs.map(doc => doc.data());
+
+  const stats = {}; group.members.forEach(m => stats[m] = { paid: 0, used: 0 });
+  expenses.forEach(exp => {
+    if(stats[exp.payer_id]) stats[exp.payer_id].paid += parseFloat(exp.total_amount); else stats[exp.payer_id] = { paid: parseFloat(exp.total_amount), used: 0 };
+    (exp.items || []).forEach(item => { const u = item.buyerId; if(stats[u]) stats[u].used += parseFloat(item.price); else stats[u] = { paid: 0, used: parseFloat(item.price) }; });
+  });
+
+  let totalPaid = 0, totalUsed = 0;
+  let html = `<table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;"><thead><tr style="background: rgba(255,255,255,0.05);"><th style="padding: 10px; border-bottom: 1px solid var(--border);">สมาชิก</th><th style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right; color: var(--success);">สำรองจ่าย (฿)</th><th style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right; color: var(--danger);">ใช้ไป (฿)</th><th style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right; color: #a78bfa;">สุทธิ (฿)</th></tr></thead><tbody>`;
+  
+  Object.keys(stats).forEach(u => {
+    const s = stats[u]; const displayUser = globalUsers.find(x => x.username === u)?.display_name || u;
+    const bal = s.paid - s.used; const balColor = bal > 0 ? 'var(--success)' : (bal < 0 ? 'var(--danger)' : 'var(--text)'); const balSign = bal > 0 ? '+' : '';
+    totalPaid += s.paid; totalUsed += s.used;
+    html += `<tr><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">${displayUser} <br><small style="color:var(--muted)">@${u}</small></td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right;">${s.paid.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right;">${s.used.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: right; color: ${balColor}; font-weight: bold;">${balSign}${bal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`;
+  });
+  html += `</tbody><tfoot><tr style="background: rgba(255,255,255,0.1); font-weight: bold;"><td style="padding: 10px;">รวมทั้งหมด</td><td style="padding: 10px; text-align: right;">${totalPaid.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td style="padding: 10px; text-align: right;">${totalUsed.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td><td style="padding: 10px; text-align: right;">-</td></tr></tfoot></table>`;
+  document.getElementById('form-fields').innerHTML = html;
+}
+
+async function handleFormSubmit(event) {
+  event.preventDefault();
+  if (currentFormType === 'user') {
+    const payload = { username: document.getElementById('form-u-username').value.trim(), password: document.getElementById('form-u-password').value, display_name: document.getElementById('form-u-display').value.trim(), is_admin: document.getElementById('form-u-admin').value === 'true' };
+    if (currentEditId) { await db.collection('users').doc(currentEditId).update(payload); } 
+    else { await db.collection('users').doc(payload.username).set(payload); }
+  } 
+  else if (currentFormType === 'group') {
+    const memStr = document.getElementById('form-g-members').value; const admStr = document.getElementById('form-g-admins').value;
+    const payload = { group_name: document.getElementById('form-g-name').value.trim(), join_code: document.getElementById('form-g-code').value.trim(), status: document.getElementById('form-g-status').value, members: memStr ? memStr.split(',').map(x => x.trim()) : [], admins: admStr ? admStr.split(',').map(x => x.trim()) : [] };
+    if (currentEditId) { await db.collection('groups').doc(currentEditId).update(payload); } 
+    else { payload.created_at = firebase.firestore.FieldValue.serverTimestamp(); await db.collection('groups').add(payload); }
+  } 
+  else if (currentFormType === 'expense') {
+    const shopName = document.getElementById('form-e-shop').value.trim(); const easyText = document.getElementById('form-e-items-easy').value.trim();
+    let finalItems = [];
+    if (easyText) {
+      easyText.split(',').forEach(part => {
+        const [u, val] = part.split('=');
+        if (u && val) finalItems.push({ itemName: shopName + " (แอดมินแก้ไข)", price: parseFloat(val), qty: 1, buyerId: u.trim(), note: "Admin Updated" });
+      });
+    }
+    const payload = { group_id: document.getElementById('form-e-group').value, shop_name: shopName, total_amount: parseFloat(document.getElementById('form-e-amount').value), payer_id: document.getElementById('form-e-payer').value, date: document.getElementById('form-e-date').value.trim(), items: finalItems };
+    if (currentEditId) { await db.collection('expenses').doc(currentEditId).update(payload); } 
+    else { payload.created_at = firebase.firestore.FieldValue.serverTimestamp(); await db.collection('expenses').add(payload); }
+  }
+  closeModal(); refreshAllData(); alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+}
+
+async function deleteUser(username) { if (confirm(`❌ ยืนยันการลบบัญชีผู้ใช้: ${username}?`)) { await db.collection('users').doc(username).delete(); refreshAllData(); } }
+async function deleteGroup(id) { if (confirm('❌ ยืนยันการลบกลุ่มทริปนี้?')) { await db.collection('groups').doc(id).delete(); refreshAllData(); } }
+async function deleteExpense(id) { if (confirm('❌ ยืนยันการลบบิลค่าใช้จ่ายนี้?')) { await db.collection('expenses').doc(id).delete(); refreshAllData(); } }
+</script>
+</body>
+</html>
