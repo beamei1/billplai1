@@ -1,4 +1,4 @@
-// ไฟล์: api/scan.js (ใช้ API v1 หลักที่เสถียร + โมเดล gemini-1.5-flash)
+// ไฟล์: api/scan.js (ใช้โมเดลรุ่นล่าสุด gemini-2.5-flash บน API version v1)
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -12,9 +12,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 💥 เปลี่ยนจาก v1beta เป็น v1 และใช้ gemini-1.5-flash (รับประกันว่าไม่ติด Not Found และไม่โดนบล็อกสิทธิ์ฟรี)
+    // 💥 อัปเดตใช้รุ่น gemini-2.5-flash บน API v1 (รุ่นมาตรฐานปัจจุบัน)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
