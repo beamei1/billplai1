@@ -1,12 +1,10 @@
-// ไฟล์: api/scan.js
+// ไฟล์: api/scan.js (ฉบับอัปเกรด แก้ปัญหาอ่านไม่ออก)
 export default async function handler(req, res) {
-  // รับเฉพาะคำสั่ง POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { image, mimeType } = req.body;
-  // ดึง API Key จากระบบหลังบ้านของ Vercel (ไม่มีใครเห็นรหัสนี้)
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -14,25 +12,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    // เซิร์ฟเวอร์ Vercel เป็นคนส่งรูปไปหา Gemini API ให้เอง
+    // ใช้รุ่น 1.5-flash ซึ่งเสถียรและโควต้าฟรีเยอะที่สุดสำหรับการอ่านรูปภาพ
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: "ทำหน้าที่เป็นระบบอ่านใบเสร็จ ดึงชื่อร้านค้า และรายการอาหารทั้งหมดพร้อมราคาต่อหน่วย และจำนวนชิ้น ตอบกลับมาเป็น JSON Format นี้เท่านั้น ห้ามมีข้อความอื่น: {\"shop_name\": \"ชื่อร้าน\", \"items\": [{\"name\": \"ชื่อรายการ\", \"price\": ราคาต่อชิ้นเป็นตัวเลข, \"qty\": จำนวนชิ้นเป็นตัวเลข}]}" },
+              { 
+                // 💥 ปรับคำสั่งให้ยืดหยุ่นขึ้นมาก: ถ้าหาอะไรไม่เจอ ให้เดาหรือใส่ค่าเริ่มต้น ห้ามส่งค่าว่าง
+                text: `คุณคือ AI ช่วยอ่านใบเสร็จร้านอาหารและบิลค่าใช้จ่าย กรุณาวิเคราะห์รูปภาพนี้แล้วสกัดข้อมูลออกมาเป็น JSON เท่านั้น โดยมีกฎดังนี้:
+1. "shop_name": ดึงชื่อร้านค้า หรือหัวบิล ถ้าไม่มีชื่อร้านเลยให้ใส่ว่า "ค่าอาหาร/เครื่องดื่ม"
+2. "items": ให้ดึงรายการสินค้า/อาหารทั้งหมดที่มีในบิล พร้อมราคาต่อหน่วย (price) และจำนวนชิ้น (qty)
+   - ถ้าในบิลไม่มีระบุจำนวนชิ้น ให้ถือว่า qty = 1
+   - ถ้าเป็นบิลที่มีแต่ยอดรวม ไม่มีรายการย่อย ให้ใส่ name = "ค่าใช้จ่ายรวม", price = ยอดรวมทั้งหมด, qty = 1
+3. ตอบกลับมาเป็นโครงสร้าง JSON นี้เท่านั้น ห้ามมีข้อความอธิบายใดๆ ทั้งสิ้น:
+{"shop_name": "ชื่อร้าน", "items": [{"name": "ชื่อรายการ", "price": 100, "qty": 1}]}` 
+              },
               { inline_data: { mime_type: mimeType, data: image } }
             ]
           }],
-          generationConfig: { response_mime_type: "application/json" }
+          generationConfig: { 
+            response_mime_type: "application/json",
+            temperature: 0.1 // ปรับให้ AI ไม่จินตนาการเอง เน้นอ่านตามจริง
+          }
         })
       }
     );
 
     const data = await response.json();
+    
+    // เช็คว่า Google แจ้ง Error อะไรกลับมาหรือไม่ (เช่น โควต้าเต็ม หรือ Key ผิด)
+    if (data.error) {
+      return res.status(500).json({ error: `Google API Error: ${data.error.message}` });
+    }
+
     return res.status(200).json(data);
   } catch (error) {
     return res.status(500).json({ error: error.message });
