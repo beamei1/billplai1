@@ -393,6 +393,18 @@ body::after { content: ''; position: fixed; inset: 0; background-image: radial-g
 
   <div class="section-title">🛒 รายการย่อย</div>
   <div id="items-container"></div>
+  
+  <!-- 📷 AI RECEIPT SCANNER (เพิ่มใหม่) -->
+  <div style="background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(124,58,237,0.15)); border: 1px dashed var(--neon3); border-radius: var(--r); padding: 14px; margin: 10px 0 14px; text-align: center;">
+    <div style="font-size: 13px; font-weight: 700; color: var(--neon3); margin-bottom: 8px;">✨ ใช้ AI สแกนบิลร้านอาหารอัตโนมัติ</div>
+    <label class="btn-secondary" style="background: rgba(6,182,212,0.2); border-color: var(--neon3); cursor: pointer; display: inline-flex; width: auto; padding: 8px 16px; margin: 0 auto;">
+      📷 ถ่ายรูป / เลือกใบเสร็จ
+      <input type="file" id="receipt-input" accept="image/*" capture="environment" style="display: none;" onchange="processReceiptWithGemini(this)">
+    </label>
+    <div id="scan-status" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
+  </div>
+  <!-- 💥 จบส่วนสแกนใบเสร็จ -->
+
   <button class="btn-secondary" onclick="addItemRow()" style="margin:6px 0 14px">➕ เพิ่มรายการ</button>
   <div class="btn-row">
     <button class="btn-primary" onclick="saveExpense()">💾 บันทึก</button>
@@ -618,7 +630,6 @@ function loadGroups() {
   const list = document.getElementById('group-list');
   list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">กำลังโหลดกลุ่ม...</div></div>';
   
-  // ยกเลิกการดักฟังเก่า (ถ้ามี) ก่อนสร้างใหม่
   if (unsubscribeGroups) unsubscribeGroups();
 
   unsubscribeGroups = db.collection('groups')
@@ -737,7 +748,6 @@ function loadExpenses(gid) {
   
   if (unsubscribeExpenses) unsubscribeExpenses();
 
-  // ดักฟังบิลแบบ Real-time
   unsubscribeExpenses = db.collection('expenses')
     .where('group_id','==',gid)
     .orderBy('created_at','desc')
@@ -787,7 +797,6 @@ function loadExpenses(gid) {
         list.innerHTML += html+'</div>';
       });
 
-      // ถ้าหน้าต่างสรุปหนี้เปิดอยู่ ให้อัปเดตอัตโนมัติด้วยเลยเมื่อมีคนกดเพิ่ม/ลบบิล
       if (document.getElementById('debt-summary-result').style.display === 'block') {
          showDebtSummary();
       }
@@ -887,7 +896,6 @@ async function saveExpense() {
       await db.collection('expenses').add(payload); 
     }
     
-    // แจ้งเตือนแบบเก๋ๆ ว่าถักทอบิลเสร็จแล้ว (ถึงไม่มีเน็ตก็กดได้)
     UIModal.alert('สำเร็จ 🎉','บันทึกข้อมูลเรียบร้อย<br><small style="color:var(--success)">*หากคุณออฟไลน์อยู่ บิลจะถูกซิงค์ขึ้นระบบให้อัตโนมัติเมื่อมีอินเทอร์เน็ต</small>');
     hideExpenseForm();
   } catch(error) {
@@ -895,7 +903,6 @@ async function saveExpense() {
   }
 }
 
-// ระบบคำนวณหนี้ใช้ Logic เดิมได้เลย
 function showDebtSummary() {
   const tx = calculateDebts(currentExpenses, currentGroup.members);
   const r = document.getElementById('debt-summary-result');
@@ -923,6 +930,79 @@ function calculateDebts(exps, members) {
     debt[i].amount-=a; cred[j].amount-=a;
     if(debt[i].amount<.01)i++; if(cred[j].amount<.01)j++;
   } return tx;
+}
+
+/* =========================================================
+   🤖 GEMINI AI RECEIPT SCANNER (สแกนใบเสร็จอัตโนมัติผ่าน Vercel API)
+   ========================================================= */
+async function processReceiptWithGemini(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('scan-status');
+  status.style.color = "var(--neon3)";
+  status.innerHTML = '⏳ AI กำลังอ่านใบเสร็จ... กรุณารอสักครู่ครับ';
+  
+  document.getElementById('loading-screen').classList.remove('hidden');
+
+  try {
+    const base64Image = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // เรียกใช้งานผ่าน Vercel API Route เพื่อความปลอดภัย (ไม่ติด Git Secret Scanning)
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: base64Image,
+        mimeType: file.type
+      })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || "เซิร์ฟเวอร์ตอบกลับผิดพลาด");
+    }
+    
+    if (!data.candidates || !data.candidates[0].content) {
+      throw new Error("ไม่สามารถอ่านข้อมูลใบเสร็จจากรูปภาพนี้ได้");
+    }
+
+    const resultText = data.candidates[0].content.parts[0].text;
+    const parsedData = JSON.parse(resultText);
+
+    if (parsedData.shop_name && !document.getElementById('new-shop-name').value) {
+      document.getElementById('new-shop-name').value = parsedData.shop_name;
+    }
+
+    if (parsedData.items && parsedData.items.length > 0) {
+      const container = document.getElementById('items-container');
+      const firstRowName = container.querySelector('.item-name');
+      if (firstRowName && firstRowName.value.trim() === '') {
+        container.innerHTML = '';
+      }
+
+      parsedData.items.forEach(item => {
+        addItemRow(item.name, item.price, item.qty || 1);
+      });
+    }
+
+    status.style.color = "var(--success)";
+    status.innerHTML = '✅ AI ดึงรายการบิลให้เรียบร้อยแล้ว!';
+  } catch (error) {
+    console.error("Gemini Scan Error:", error);
+    status.style.color = "var(--danger)";
+    status.innerHTML = '❌ อ่านใบเสร็จไม่สำเร็จ ลองถ่ายรูปให้ชัดขึ้นนะครับ';
+    UIModal.alert('แจ้งเตือน', 'AI ไม่สามารถอ่านใบเสร็จนี้ได้:<br><small style="color:var(--danger)">' + error.message + '</small>');
+  } finally {
+    document.getElementById('loading-screen').classList.add('hidden');
+    input.value = '';
+  }
 }
 </script>
 </body>
