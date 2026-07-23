@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>💸 ประวัติค่าใช้จ่ายทั้งหมด</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070714;
+      --bg2: #0d0d24;
+      --surface: rgba(255,255,255,0.04);
+      --glass: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.12);
+      --neon: #7c3aed;
+      --neon2: #ec4899;
+      --neon3: #06b6d4;
+      --text: #f8fafc;
+      --muted: rgba(248,250,252,0.5);
+      --r: 16px;
+      --r-lg: 24px;
+      --r-xl: 32px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Kanit', sans-serif;
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 60% at 20% -10%, rgba(124,58,237,0.35) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 90% 10%, rgba(236,72,153,0.25) 0%, transparent 50%), radial-gradient(ellipse 50% 40% at 50% 90%, rgba(6,182,212,0.2) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+    body::after { content: ''; position: fixed; inset: 0; background-image: radial-gradient(1px 1px at 20% 25%, rgba(255,255,255,0.15) 0, transparent 0), radial-gradient(1px 1px at 70% 65%, rgba(255,255,255,0.1) 0, transparent 0), radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.12) 0, transparent 0); pointer-events: none; z-index: 0; }
+
+    .page-wrap { position: relative; z-index: 1; min-height: 100vh; padding: max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),24px); }
+    .container { max-width: 440px; margin: 0 auto; animation: riseUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    @keyframes riseUp { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+    /* === BUTTONS & TOP BAR === */
+    .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; color: var(--text); font-family: 'Kanit', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; padding: 8px 16px; transition: background 0.15s, transform 0.12s; }
+    .btn-ghost:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+    .section-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0; background: linear-gradient(90deg, var(--text), rgba(255,255,255,0.6)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+    /* === TOTAL BOX === */
+    .total-hero { border-radius: var(--r-lg); padding: 24px; background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(236,72,153,0.2)); border: 1px solid rgba(124,58,237,0.35); box-shadow: 0 0 30px rgba(124,58,237,0.2), inset 0 1px 0 rgba(255,255,255,0.1); position: relative; overflow: hidden; margin: 12px 0 24px; text-align: center; }
+    .total-hero::before { content: ''; position: absolute; width: 120px; height: 120px; background: radial-gradient(circle, rgba(124,58,237,0.4), transparent); right: -20px; top: -20px; border-radius: 50%; }
+    .total-hero-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.08em; }
+    .total-hero-amount { font-size: 42px; font-weight: 900; letter-spacing: -0.03em; margin-top: 4px; background: linear-gradient(90deg, #fff, rgba(255,255,255,0.8)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .total-hero-unit { font-size: 20px; font-weight: 400; }
+
+    /* === DATE HEADER === */
+    .date-stripe { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r); margin: 18px 0 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+    .date-stripe:hover { background: rgba(255,255,255,0.08); }
+    .date-stripe:active { transform: scale(0.98); }
+    .date-stripe .dt-total { background: linear-gradient(90deg, #34d399, #10b981); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
+
+    /* === BILL CARD === */
+    .bill-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--r-lg); padding: 16px; margin: 10px 0; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s; cursor: pointer; }
+    .bill-card:hover { border-color: rgba(124,58,237,0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .bill-card:active { transform: scale(0.98); }
+    .bill-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .bill-card-title { font-size: 16px; font-weight: 700; }
+    .bill-card-title small { font-size: 12px; color: var(--neon3); font-weight: 500; margin-left: 4px; padding: 2px 8px; background: rgba(6, 182, 212, 0.1); border-radius: 999px; }
+    .bill-card-amt { font-size: 18px; font-weight: 900; background: linear-gradient(135deg, #f43f5e, #fb7185); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
+    .bill-card-meta { font-size: 13px; color: var(--muted); margin-top: 8px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .bill-card-meta b { color: rgba(255,255,255,0.8); font-weight: 600; }
+    .click-hint { font-size: 12px; color: var(--neon3); font-weight: 600; }
+
+    /* === MODAL === */
+    .modal-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal-sheet { width: 100%; max-width: 440px; background: #13132b; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--r-xl); padding: 24px; animation: pop-modal 0.35s cubic-bezier(0.16,1,0.3,1); max-height: 85vh; overflow-y: auto; }
+    @keyframes pop-modal { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+    .modal-body { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .btn-primary-modal { display: block; width: 100%; margin-top: 20px; padding: 14px; background: linear-gradient(135deg, var(--neon), var(--neon2)); border: none; border-radius: var(--r); color: #fff; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; text-align: center; }
+
+    /* === EMPTY / LOADING === */
+    .empty-state { text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1); border-radius: var(--r-lg); margin: 14px 0; }
+    .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.8; animation: float 3s ease-in-out infinite; }
+    .empty-text { font-size: 15px; color: var(--muted); font-weight: 500; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    .hidden { display: none !important; }
+    
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <div id="ui-modal" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title" id="modal-title">รายละเอียดบิล</div>
+      <div class="modal-body" id="modal-body"></div>
+      <button class="btn-primary-modal" onclick="closeModal()">ปิดหน้าต่าง</button>
+    </div>
+  </div>
+
+  <div class="page-wrap">
+    <div class="container">
+      <div class="top-bar">
+        <h2 class="section-title">📅 ประวัติย้อนหลัง</h2>
+        <button class="btn-ghost" onclick="window.location.href = '/'">← หน้าหลัก</button>
+      </div>
+
+      <div id="grand-total-container" class="total-hero hidden">
+        <div class="total-hero-label">💸 ยอดใช้จ่ายรวมทุกกลุ่ม</div>
+        <div class="total-hero-amount" id="grand-total-amount">0 <span class="total-hero-unit">฿</span></div>
+      </div>
+
+      <div id="loading" class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-text">กำลังโหลดข้อมูลประวัติ...</div>
+      </div>
+      <div id="history-list" class="hidden"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+  const firebaseConfig = { apiKey: "AIzaSyCm2dCKtVQ3KGsaKNdTye6q0fxgQ2AWLvI", authDomain: "bill20266.firebaseapp.com", projectId: "bill20266" };
+  if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+  const db = firebase.firestore();
+
+  // 🟢 เปิดใช้งาน Offline Persistence
+db.enablePersistence()
+  .catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.warn('เปิดแอปหลายแท็บ โหมดออฟไลน์จะทำงานได้แค่แท็บเดียว');
+    } else if (err.code == 'unimplemented') {
+      console.warn('เบราว์เซอร์นี้ไม่รองรับโหมดออฟไลน์');
+    }
+  });
+  
+  let usersMap = {}, currentUser = null;
+  let unsubscribeHistory = null;
+  let historyExpensesMap = {}; // สำหรับเก็บข้อมูลบิลไว้แสดงใน Modal
+
+  window.addEventListener('load', async () => {
+    const saved = localStorage.getItem('splitbill_user') || sessionStorage.getItem('splitbill_user');
+    if (saved) {
+      currentUser = JSON.parse(saved);
+      await loadUsersMap();
+      await loadHistory(currentUser.username);
+} else {
+  alert("กรุณาล็อกอินก่อน");
+  window.location.href = "/";
+}
+  });
+
+  async function loadUsersMap() {
+    const snap = await db.collection('users').get();
+    snap.forEach(doc => { const d = doc.data(); usersMap[d.username] = d.display_name || d.username; });
+  }
+
+  /* === เปิด/ปิด Modal === */
+  function viewBillModal(billId) {
+    const bill = historyExpensesMap[billId];
+    if (!bill) return;
+
+    const payerName = usersMap[bill.payer_id] || bill.payer_id;
+    let itemsHtml = '';
+    
+    bill.items.forEach(i => {
+      const buyerName = usersMap[i.buyerId] || i.buyerId;
+      itemsHtml += `<div style="display:flex;justify-content:space-between; align-items:center; padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span>📦 ${i.itemName}</span><span style="font-size:11px; color:var(--muted);">👤 ของ: ${buyerName}</span>
+        </div><span style="color:#a78bfa;font-weight:700">${parseFloat(i.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</span>
+      </div>`;
+    });
+
+    document.getElementById('modal-title').innerHTML = `🧾 ${bill.shop_name} <br><small style="font-size:14px;color:var(--neon3);font-weight:500;">กลุ่ม: ${bill.groupName}</small>`;
+    document.getElementById('modal-body').innerHTML = `
+      <p style="margin-bottom:4px; font-size:15px; color:var(--text)">💳 สำรองจ่าย: <b>${payerName}</b></p>
+      <p style="margin-bottom:12px; font-size:15px; color:var(--text)">ยอดรวม: <b style="color:#f43f5e; font-size:18px;">${parseFloat(bill.total_amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</b></p>
+      <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:12px">
+        <div style="font-weight: 600; margin-bottom: 6px; color: rgba(255,255,255,0.8);">รายการย่อย:</div>
+        ${itemsHtml}
+      </div>
+    `;
+    
+    document.getElementById('ui-modal').classList.remove('hidden');
+  }
+
+  function closeModal(e) {
+    // ป้องกันการปิดถ้าคลิกโดนตัว content ด้านใน (ถ้ามีการส่ง event มา)
+    if (e && e.target.id !== 'ui-modal') return; 
+    document.getElementById('ui-modal').classList.add('hidden');
+  }
+
+  async function loadHistory(username) {
+  // ดึงกลุ่มของผู้ใช้ (ส่วนนี้ดึงครั้งเดียวพอ)
+  const snapGroups = await db.collection('groups').where('members', 'array-contains', username).get();
+  if(snapGroups.empty) { showEmptyState("🌌", "ยังไม่มีกลุ่ม หรือประวัติการใช้จ่าย"); return; }
+
+  const groupIds = []; const groupNames = {};
+  snapGroups.forEach(doc => { 
+    groupIds.push(doc.id); groupNames[doc.id] = doc.data().group_name; 
+  });
+
+  if (unsubscribeHistory) unsubscribeHistory();
+
+  // ดักฟังประวัติบิลทั้งหมดแบบ Real-time
+  unsubscribeHistory = db.collection('expenses')
+    .orderBy('created_at', 'desc')
+    .onSnapshot((snapExpenses) => {
+      const expenses = snapExpenses.docs
+        .map(doc => ({id: doc.id, ...doc.data()}))
+        .filter(e => groupIds.includes(e.group_id));
+      
+      if(expenses.length === 0) { showEmptyState("🧾", "เข้าร่วมกลุ่มแล้ว แต่ยังไม่มีบิลถูกบันทึกไว้"); return; }
+
+      const groupedByDate = {}; let grandTotal = 0;
+      historyExpensesMap = {}; // รีเซ็ตตัวแปรเก็บข้อมูล Modal
+      
+      expenses.forEach(exp => {
+        const d = exp.date || "ไม่ระบุวันที่";
+        if(!groupedByDate[d]) groupedByDate[d] = { total: 0, items: [] };
+        groupedByDate[d].items.push(exp);
+        groupedByDate[d].total += parseFloat(exp.total_amount);
+        grandTotal += parseFloat(exp.total_amount);
+      });
+
+      const listDiv = document.getElementById('history-list'); 
+      listDiv.innerHTML = "";
+
+      // สร้าง HTML จัดกลุ่มตามวันที่
+      Object.keys(groupedByDate).sort((a,b) => b.localeCompare(a)).forEach((date, index) => {
+        const dayData = groupedByDate[date];
+        const containerId = `date-group-${index}`;
+        
+        // --- แถบวันที่ (คลิกเพื่อพับได้) ---
+        let html = `<div class="date-stripe" onclick="document.getElementById('${containerId}').classList.toggle('hidden')">
+            <span>🗓️ ${date}</span><span class="dt-total">${dayData.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</span>
+          </div>
+          <div id="${containerId}">`;
+        
+        dayData.items.forEach(bill => {
+          // เก็บข้อมูลไว้ดึงตอนคลิก
+          historyExpensesMap[bill.id] = { ...bill, groupName: groupNames[bill.group_id] };
+          const payerName = usersMap[bill.payer_id] || bill.payer_id;
+          
+          // --- การ์ดบิล (คลิกเรียก Modal) ---
+          html += `<div class="bill-card" onclick="viewBillModal('${bill.id}')">
+            <div class="bill-card-head">
+              <div class="bill-card-title">🧾 ${bill.shop_name} <small>${groupNames[bill.group_id]}</small></div>
+              <div class="bill-card-amt">${parseFloat(bill.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</div>
+            </div>
+            <div class="bill-card-meta">
+              <div><b>💳 สำรองจ่าย:</b> ${payerName}</div>
+              <div class="click-hint">👁️ ดูรายละเอียด</div>
+            </div>
+          </div>`;
+        });
+        
+        html += `</div>`; // ปิด container ของวันที่
+        listDiv.innerHTML += html;
+      });
+
+      document.getElementById('grand-total-amount').innerHTML = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' <span class="total-hero-unit">฿</span>';
+      document.getElementById('grand-total-container').classList.remove('hidden'); 
+      document.getElementById('loading').classList.add('hidden'); 
+      listDiv.classList.remove('hidden');
+    });
+  }
+
+  function showEmptyState(icon, text) { document.getElementById('loading').innerHTML = `<div class="empty-icon">${icon}</div><div class="empty-text">${text}</div>`; }
+</script>
+</body>
+</html>
