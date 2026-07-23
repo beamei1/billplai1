@@ -394,14 +394,26 @@ body::after { content: ''; position: fixed; inset: 0; background-image: radial-g
   <div class="section-title">🛒 รายการย่อย</div>
   <div id="items-container"></div>
   
-  <!-- 📷 AI RECEIPT SCANNER (เพิ่มใหม่) -->
-  <div style="background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(124,58,237,0.15)); border: 1px dashed var(--neon3); border-radius: var(--r); padding: 14px; margin: 10px 0 14px; text-align: center;">
-    <div style="font-size: 13px; font-weight: 700; color: var(--neon3); margin-bottom: 8px;">✨ ใช้ AI สแกนบิลร้านอาหารอัตโนมัติ</div>
-    <label class="btn-secondary" style="background: rgba(6,182,212,0.2); border-color: var(--neon3); cursor: pointer; display: inline-flex; width: auto; padding: 8px 16px; margin: 0 auto;">
-      📷 ถ่ายรูป / เลือกใบเสร็จ
-      <input type="file" id="receipt-input" accept="image/*" capture="environment" style="display: none;" onchange="processReceiptWithGemini(this)">
-    </label>
-    <div id="scan-status" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
+  <!-- 📷 AI RECEIPT SCANNER (อัปเกรดปุ่มถ่ายรูป/เลือกรูป) -->
+  <div style="background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(124,58,237,0.15)); border: 1px dashed var(--neon3); border-radius: var(--r); padding: 16px; margin: 10px 0 14px; text-align: center;">
+    <div style="font-size: 13px; font-weight: 700; color: var(--neon3); margin-bottom: 12px;">✨ ใช้ AI สแกนบิลร้านอาหาร</div>
+    
+    <!-- ปุ่มเลือก 2 รูปแบบ -->
+    <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+      <!-- 1. ปุ่มถ่ายรูปด้วยกล้อง -->
+      <label class="btn-secondary" style="background: rgba(6,182,212,0.2); border-color: var(--neon3); cursor: pointer; display: inline-flex; width: auto; padding: 8px 14px; font-size: 13px; margin: 0;">
+        📷 ถ่ายรูปใบเสร็จ
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;" onchange="processReceiptWithGemini(this)">
+      </label>
+      
+      <!-- 2. ปุ่มเลือกจากอัลบั้มรูปภาพ -->
+      <label class="btn-secondary" style="background: rgba(124,58,237,0.2); border-color: var(--neon); cursor: pointer; display: inline-flex; width: auto; padding: 8px 14px; font-size: 13px; margin: 0;">
+        🖼️ เลือกรูปจากอัลบั้ม
+        <input type="file" id="gallery-input" accept="image/*" style="display: none;" onchange="processReceiptWithGemini(this)">
+      </label>
+    </div>
+    
+    <div id="scan-status" style="font-size: 12px; color: var(--muted); margin-top: 10px;"></div>
   </div>
   <!-- 💥 จบส่วนสแกนใบเสร็จ -->
 
@@ -941,7 +953,7 @@ async function processReceiptWithGemini(input) {
 
   const status = document.getElementById('scan-status');
   status.style.color = "var(--neon3)";
-  status.innerHTML = '⏳ AI กำลังอ่านใบเสร็จ... กรุณารอสักครู่ครับ';
+  status.innerHTML = '⏳ AI กำลังอ่านใบเสร็จ... กรุณารอสักครู่';
   
   document.getElementById('loading-screen').classList.remove('hidden');
 
@@ -997,11 +1009,11 @@ async function processReceiptWithGemini(input) {
   } catch (error) {
     console.error("Gemini Scan Error:", error);
     status.style.color = "var(--danger)";
-    status.innerHTML = '❌ อ่านใบเสร็จไม่สำเร็จ ลองถ่ายรูปให้ชัดขึ้นนะครับ';
+    status.innerHTML = '❌ อ่านใบเสร็จไม่สำเร็จ ลองถ่ายรูปหรือเลือกรูปให้ชัดขึ้น';
     UIModal.alert('แจ้งเตือน', 'AI ไม่สามารถอ่านใบเสร็จนี้ได้:<br><small style="color:var(--danger)">' + error.message + '</small>');
   } finally {
     document.getElementById('loading-screen').classList.add('hidden');
-    input.value = '';
+    input.value = ''; // รีเซ็ต input ทั้งกล้องและแกลลอรี่เพื่อให้เลือกไฟล์เดิมซ้ำได้
   }
 }
 </script>
