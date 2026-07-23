@@ -1,4 +1,4 @@
-// ไฟล์: api/scan.js (แก้ไขชื่อรุ่นโมเดลเป็น gemini-2.0-flash)
+// ไฟล์: api/scan.js (เปลี่ยนเป็น gemini-1.5-flash เพื่อใช้สิทธิ์ Free Tier)
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -12,9 +12,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 💥 เปลี่ยนรุ่นตรงนี้เป็น gemini-2.0-flash ครับ (รองรับงาน Vision/OCR ใบเสร็จได้แม่นยำและเร็วมาก)
+    // 💥 บรรทัดนี้สำคัญมาก! ต้องใช้ gemini-1.5-flash เท่านั้น ถึงจะไม่ติด limit: 0
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
