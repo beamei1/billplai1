@@ -953,25 +953,50 @@ async function processReceiptWithGemini(input) {
 
   const status = document.getElementById('scan-status');
   status.style.color = "var(--neon3)";
-  status.innerHTML = '⏳ AI กำลังอ่านใบเสร็จ... กรุณารอสักครู่';
+  status.innerHTML = '⏳ AI กำลังอ่านใบเสร็จ... กรุณารอสักครู่ครับ';
   
   document.getElementById('loading-screen').classList.remove('hidden');
 
   try {
+    // 💥 อัปเกรด: ย่อขนาดรูปภาพให้กว้างไม่เกิน 1200px และบีบอัดเหลือ 70% 
+    // เพื่อป้องกันปัญหา Vercel ล่มเพราะไฟล์เกิน 4.5MB (Load failed)
     const base64Image = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // ย่อขนาดถ้ารูปใหญ่เกินไป
+        const MAX_SIZE = 1200;
+        if (width > height && width > MAX_SIZE) {
+          height *= MAX_SIZE / width;
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width *= MAX_SIZE / height;
+          height = MAX_SIZE;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // แปลงเป็น JPEG คุณภาพ 70% แล้วดึงแค่เอาโค้ด Base64 ส่งไป
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(dataUrl.split(',')[1]);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
     });
 
-    // เรียกใช้งานผ่าน Vercel API Route เพื่อความปลอดภัย (ไม่ติด Git Secret Scanning)
+    // ส่วนที่เหลือเหมือนเดิม...
     const response = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         image: base64Image,
-        mimeType: file.type
+        mimeType: 'image/jpeg' // ส่งเป็น jpeg เสมอเพราะเราแปลงด้วย Canvas แล้ว
       })
     });
 
