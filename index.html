@@ -379,7 +379,7 @@ body::after { content: ''; position: fixed; inset: 0; background-image: radial-g
   <div class="glass-card">
     <div class="input-wrap">
       <label class="input-label">ชื่อร้าน / ค่าใช้จ่าย</label>
-      <input type="text" id="new-shop-name" class="neon-input" placeholder="เช่น ร้านส้มตำเจ๊หน่อย">
+      <input type="text" id="new-shop-name" class="neon-input" placeholder="เช่น ทริปสهيร์ท / ค่าอาหารรวม">
     </div>
     <div class="input-wrap">
       <label class="input-label">หมายเหตุ</label>
@@ -394,19 +394,16 @@ body::after { content: ''; position: fixed; inset: 0; background-image: radial-g
   <div class="section-title">🛒 รายการย่อย</div>
   <div id="items-container"></div>
   
-  <!-- 📷 AI RECEIPT SCANNER (อัปเกรดปุ่มถ่ายรูป/เลือกรูป) -->
+  <!-- 📷 AI RECEIPT SCANNER -->
   <div style="background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(124,58,237,0.15)); border: 1px dashed var(--neon3); border-radius: var(--r); padding: 16px; margin: 10px 0 14px; text-align: center;">
     <div style="font-size: 13px; font-weight: 700; color: var(--neon3); margin-bottom: 12px;">✨ ใช้ AI สแกนบิลร้านอาหาร</div>
     
-    <!-- ปุ่มเลือก 2 รูปแบบ -->
     <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-      <!-- 1. ปุ่มถ่ายรูปด้วยกล้อง -->
       <label class="btn-secondary" style="background: rgba(6,182,212,0.2); border-color: var(--neon3); cursor: pointer; display: inline-flex; width: auto; padding: 8px 14px; font-size: 13px; margin: 0;">
         📷 ถ่ายรูปใบเสร็จ
         <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;" onchange="processReceiptWithGemini(this)">
       </label>
       
-      <!-- 2. ปุ่มเลือกจากอัลบั้มรูปภาพ -->
       <label class="btn-secondary" style="background: rgba(124,58,237,0.2); border-color: var(--neon); cursor: pointer; display: inline-flex; width: auto; padding: 8px 14px; font-size: 13px; margin: 0;">
         🖼️ เลือกรูปจากอัลบั้ม
         <input type="file" id="gallery-input" accept="image/*" style="display: none;" onchange="processReceiptWithGemini(this)">
@@ -415,7 +412,6 @@ body::after { content: ''; position: fixed; inset: 0; background-image: radial-g
     
     <div id="scan-status" style="font-size: 12px; color: var(--muted); margin-top: 10px;"></div>
   </div>
-  <!-- 💥 จบส่วนสแกนใบเสร็จ -->
 
   <button class="btn-secondary" onclick="addItemRow()" style="margin:6px 0 14px">➕ เพิ่มรายการ</button>
   <div class="btn-row">
@@ -431,7 +427,6 @@ body::after { content: ''; position: fixed; inset: 0; background-image: radial-g
 <script>
 const SCRIPT_URL = "";
 
-// ⚠️ ใส่ Config ของ Firebase คุณที่นี่
 const firebaseConfig = {
   apiKey: "AIzaSyCm2dCKtVQ3KGsaKNdTye6q0fxgQ2AWLvI",
   authDomain: "bill20266.firebaseapp.com",
@@ -443,7 +438,6 @@ const firebaseConfig = {
 if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.firestore();
 
-// 🟢 เปิดใช้งาน Offline Persistence
 db.enablePersistence()
   .catch((err) => {
     if (err.code == 'failed-precondition') {
@@ -821,9 +815,12 @@ function viewExpenseDetails(id) {
   let itemsHtml = '';
   b.items.forEach(i=>{
     const buyerName = usersMap[i.buyerId] || i.buyerId;
+    const noteDisplay = i.note ? `<span style="font-size:11px; color:var(--neon3);">📌 ${i.note}</span>` : '';
     itemsHtml += `<div style="display:flex;justify-content:space-between; align-items:center; padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px">
       <div style="display:flex; flex-direction:column; gap:2px;">
-        <span>📦 ${i.itemName}</span><span style="font-size:11px; color:var(--muted);">👤 ของ: ${buyerName}</span>
+        <span>📦 ${i.itemName}</span>
+        ${noteDisplay}
+        <span style="font-size:11px; color:var(--muted);">👤 ของ: ${buyerName}</span>
       </div><span style="color:#a78bfa;font-weight:700">${parseFloat(i.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</span>
     </div>`;
   });
@@ -883,7 +880,7 @@ async function saveExpense() {
   const note = document.getElementById('new-expense-note').value.trim();
   const payer = document.getElementById('new-payer-id').value;
   const eid = document.getElementById('editing-expense-id').value;
-  if(!shop) return UIModal.alert('แจ้งเตือน','กรุณาใส่ชื่อร้าน');
+  if(!shop) return UIModal.alert('แจ้งเตือน','กรุณาใส่ชื่อบิล / ค่าใช้จ่ายหลัก');
   const rows = document.querySelectorAll('.item-row');
   if(!rows.length) return UIModal.alert('แจ้งเตือน','กรุณาเพิ่มอย่างน้อย 1 รายการ');
   
@@ -958,8 +955,6 @@ async function processReceiptWithGemini(input) {
   document.getElementById('loading-screen').classList.remove('hidden');
 
   try {
-    // 💥 อัปเกรด: ย่อขนาดรูปภาพให้กว้างไม่เกิน 1200px และบีบอัดเหลือ 70% 
-    // เพื่อป้องกันปัญหา Vercel ล่มเพราะไฟล์เกิน 4.5MB (Load failed)
     const base64Image = await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -967,7 +962,6 @@ async function processReceiptWithGemini(input) {
         let width = img.width;
         let height = img.height;
         
-        // ย่อขนาดถ้ารูปใหญ่เกินไป
         const MAX_SIZE = 1200;
         if (width > height && width > MAX_SIZE) {
           height *= MAX_SIZE / width;
@@ -982,7 +976,6 @@ async function processReceiptWithGemini(input) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // แปลงเป็น JPEG คุณภาพ 70% แล้วดึงแค่เอาโค้ด Base64 ส่งไป
         const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
         resolve(dataUrl.split(',')[1]);
       };
@@ -990,13 +983,12 @@ async function processReceiptWithGemini(input) {
       img.src = URL.createObjectURL(file);
     });
 
-    // ส่วนที่เหลือเหมือนเดิม...
     const response = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         image: base64Image,
-        mimeType: 'image/jpeg' // ส่งเป็น jpeg เสมอเพราะเราแปลงด้วย Canvas แล้ว
+        mimeType: 'image/jpeg'
       })
     });
 
@@ -1013,24 +1005,20 @@ async function processReceiptWithGemini(input) {
     const resultText = data.candidates[0].content.parts[0].text;
     const parsedData = JSON.parse(resultText);
 
-    if (parsedData.shop_name && !document.getElementById('new-shop-name').value) {
-      document.getElementById('new-shop-name').value = parsedData.shop_name;
-    }
-
+    // 💥 อัปเกรดตามความต้องการ:
+    // 1. จะไม่เอาชื่อร้านไปเปลี่ยนชื่อบิลหลัก (ปล่อยให้ช่องชื่อร้าน/ค่าใช้จ่ายคงเดิม)
+    // 2. ถ้าสแกนรอบใหม่จะไม่ลบข้อมูลเก่าทิ้ง แต่จะใช้ addItemRow ต่อท้ายลงไปข้างล่างทันที
     if (parsedData.items && parsedData.items.length > 0) {
-      const container = document.getElementById('items-container');
-      const firstRowName = container.querySelector('.item-name');
-      if (firstRowName && firstRowName.value.trim() === '') {
-        container.innerHTML = '';
-      }
+      const shopNameFromAI = parsedData.shop_name || 'ร้านค้าทั่วไป';
 
       parsedData.items.forEach(item => {
-        addItemRow(item.name, item.price, item.qty || 1);
+        // นำชื่อร้านไปใส่ไว้ในช่องหมายเหตุ (Note) ของแต่ละรายการย่อย
+        addItemRow(item.name, item.price, item.qty || 1, [], shopNameFromAI);
       });
     }
 
     status.style.color = "var(--success)";
-    status.innerHTML = '✅ AI ดึงรายการบิลให้เรียบร้อยแล้ว!';
+    status.innerHTML = '✅ AI ดึงรายการเพิ่มลงในบิลเรียบร้อยแล้ว!';
   } catch (error) {
     console.error("Gemini Scan Error:", error);
     status.style.color = "var(--danger)";
@@ -1038,7 +1026,7 @@ async function processReceiptWithGemini(input) {
     UIModal.alert('แจ้งเตือน', 'AI ไม่สามารถอ่านใบเสร็จนี้ได้:<br><small style="color:var(--danger)">' + error.message + '</small>');
   } finally {
     document.getElementById('loading-screen').classList.add('hidden');
-    input.value = ''; // รีเซ็ต input ทั้งกล้องและแกลลอรี่เพื่อให้เลือกไฟล์เดิมซ้ำได้
+    input.value = '';
   }
 }
 </script>
